@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="pageTitle">Slow Your Roll: Helper!</title>
+    
+    <!-- External CDN Resources -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Local Stylesheets -->
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/components.css">
+    <link rel="stylesheet" href="styles/responsive.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 id="appHeader"><i class="fas fa-chart-line"></i> <span id="headerTitle">Roll Smoothness Analyzer</span></h1>
+        </header>
+        
+        <nav class="mode-selector">
+            <button class="mode-btn active" onclick="setMode('single')">
+                <i class="fas fa-mobile-alt"></i> Single
+            </button>
+            <button class="mode-btn" onclick="setMode('multi')">
+                <i class="fas fa-network-wired"></i> Multi
+            </button>
+            <button class="mode-btn" onclick="setMode('coach')">
+                <i class="fas fa-trophy"></i> Coach
+            </button>
+            <button class="mode-btn" onclick="setMode('logs')">
+                <i class="fas fa-list-alt"></i> Logs
+            </button>
+            <button class="mode-btn" onclick="setMode('sensors')">
+                <i class="fas fa-satellite-dish"></i> Sensors
+            </button>
+        </nav>
+
+        <!-- Single Device Mode -->
+        <main id="singleMode" class="main-panel">
+            <div class="device-section">
+                <div class="device-header">
+                    <span class="device-name">
+                        <i class="fas fa-mobile-alt"></i> This Device
+                    </span>
+                    <span class="status-badge status-waiting" id="status">Ready</span>
+                </div>
+
+                <div class="calibration-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Setup:</strong> Secure phone to body (belt, armband, or pocket). Press START and perform roll within 10 seconds.
+                </div>
+
+                <div class="controls">
+                    <button class="control-btn start-btn" onclick="startRecording()">
+                        <i class="fas fa-play"></i> START
+                    </button>
+                    <button class="control-btn stop-btn" onclick="stopRecording()" disabled>
+                        <i class="fas fa-stop"></i> STOP
+                    </button>
+                    <button class="control-btn reset-btn" onclick="resetData()">
+                        <i class="fas fa-redo"></i> RESET
+                    </button>
+                </div>
+
+                <div class="graph-container">
+                    <canvas id="accelerationGraph"></canvas>
+                </div>
+
+                <div class="metrics">
+                    <div class="metric-card">
+                        <div class="metric-icon"><i class="fas fa-bolt"></i></div>
+                        <div class="metric-label">Peak Force</div>
+                        <div class="metric-value" id="peakForce">0</div>
+                        <div class="metric-unit">G</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon"><i class="fas fa-wave-square"></i></div>
+                        <div class="metric-label">Smoothness</div>
+                        <div class="metric-value" id="smoothness">--</div>
+                        <div class="metric-unit">%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon"><i class="fas fa-clock"></i></div>
+                        <div class="metric-label">Roll Time</div>
+                        <div class="metric-value" id="rollTime">0</div>
+                        <div class="metric-unit">sec</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon"><i class="fas fa-chart-area"></i></div>
+                        <div class="metric-label">Jerk Index</div>
+                        <div class="metric-value" id="jerkIndex">0</div>
+                        <div class="metric-unit">m/s³</div>
+                    </div>
+                </div>
+
+                <div class="score-display">
+                    <div class="score-circle">
+                        <svg width="150" height="150">
+                            <circle cx="75" cy="75" r="65" stroke="#e0e0e0" stroke-width="15" fill="none"></circle>
+                            <circle id="scoreCircle" cx="75" cy="75" r="65" stroke="#4caf50" stroke-width="15" fill="none"
+                                    stroke-dasharray="408" stroke-dashoffset="408" stroke-linecap="round"></circle>
+                        </svg>
+                        <div class="score-text" id="overallScore">--</div>
+                    </div>
+                    <div class="score-label">Overall Score</div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Multi-Device Mode -->
+        <main id="multiMode" class="main-panel" style="display: none;">
+            <div class="room-code" id="roomCode">----</div>
+            <p class="room-description">
+                <i class="fas fa-share-alt"></i>
+                Share this code with other devices to sync measurements
+            </p>
+
+            <div class="device-placement">
+                <div class="placement-card">
+                    <div class="placement-icon"><i class="fas fa-mobile-alt"></i></div>
+                    <div class="placement-title">Device 1: Hip</div>
+                    <div class="placement-desc">Attach to belt or waistband at center of mass</div>
+                </div>
+                <div class="placement-card">
+                    <div class="placement-icon"><i class="fas fa-mobile-alt"></i></div>
+                    <div class="placement-title">Device 2: Shoulder</div>
+                    <div class="placement-desc">Secure to upper arm or shoulder strap</div>
+                </div>
+                <div class="placement-card">
+                    <div class="placement-icon"><i class="fas fa-mobile-alt"></i></div>
+                    <div class="placement-title">Device 3: Ankle</div>
+                    <div class="placement-desc">Attach to ankle or lower leg (optional)</div>
+                </div>
+            </div>
+
+            <div class="sync-indicator">
+                <div class="sync-dot"></div>
+                <span>Devices Connected: <strong id="deviceCount">1</strong></span>
+            </div>
+
+            <div class="controls">
+                <button class="control-btn start-btn" onclick="startMultiRecording()">
+                    <i class="fas fa-play"></i> START ALL
+                </button>
+                <button class="control-btn stop-btn" onclick="stopMultiRecording()" disabled>
+                    <i class="fas fa-stop"></i> STOP ALL
+                </button>
+                <button class="control-btn reset-btn" onclick="generateRoom()">
+                    <i class="fas fa-sync"></i> NEW ROOM
+                </button>
+            </div>
+
+            <div id="multiDeviceGraphs"></div>
+        </main>
+
+        <!-- Coach View -->
+        <main id="coachMode" class="main-panel" style="display: none;">
+            <h2><i class="fas fa-trophy"></i> Session History</h2>
+            <div id="sessionHistory"></div>
+        </main>
+
+        <!-- Logs View -->
+        <main id="logsMode" class="main-panel" style="display: none;">
+            <h2><i class="fas fa-list-alt"></i> System Logs</h2>
+            <div class="controls">
+                <button class="control-btn reset-btn" onclick="clearLogs()">
+                    <i class="fas fa-trash"></i> Clear Logs
+                </button>
+                <button class="control-btn export-btn" onclick="exportLogs()">
+                    <i class="fas fa-download"></i> Export
+                </button>
+            </div>
+            <div class="log-container" id="logContainer">
+                <div class="log-entry">
+                    <div class="log-timestamp">System initialized</div>
+                    <div class="log-message">Roll Smoothness Analyzer ready</div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Sensor Data View -->
+        <main id="sensorsMode" class="main-panel" style="display: none;">
+            <h2><i class="fas fa-satellite-dish"></i> Real-Time Sensor Data</h2>
+            
+            <div class="capabilities-info">
+                <div class="capabilities-title">
+                    <i class="fas fa-check-circle"></i> 3D Sensor Capabilities
+                </div>
+                <ul class="capabilities-list">
+                    <li><strong>Accelerometer:</strong> Linear acceleration in X, Y, Z axes (including gravity)</li>
+                    <li><strong>Gyroscope:</strong> Angular velocity around X, Y, Z axes (rotation rate)</li>
+                    <li><strong>Magnetometer:</strong> Magnetic field strength in X, Y, Z directions</li>
+                    <li><strong>Orientation:</strong> Device rotation (alpha, beta, gamma Euler angles)</li>
+                    <li><strong>Derived Metrics:</strong> Jerk, magnitude, angular momentum</li>
+                </ul>
+            </div>
+
+            <div class="controls">
+                <button class="control-btn start-btn" onclick="startSensorMonitoring()" id="sensorStartBtn">
+                    <i class="fas fa-play"></i> START MONITORING
+                </button>
+                <button class="control-btn stop-btn" onclick="stopSensorMonitoring()" id="sensorStopBtn" disabled>
+                    <i class="fas fa-stop"></i> STOP
+                </button>
+                <button class="control-btn reset-btn" onclick="resetSensorData()">
+                    <i class="fas fa-redo"></i> RESET
+                </button>
+            </div>
+
+            <div class="sensor-grid">
+                <!-- Accelerometer Panel -->
+                <div class="sensor-panel">
+                    <div class="sensor-title">
+                        <i class="fas fa-chart-line"></i> Accelerometer (m/s²)
+                    </div>
+                    <div class="sensor-data">
+                        <div class="axis-data">
+                            <div class="axis-label">X-Axis</div>
+                            <div class="axis-value" id="accelX">0.00</div>
+                            <div class="axis-unit">m/s²</div>
+                        </div>
+                        <div class="axis-data">
+                            <div class="axis-label">Y-Axis</div>
+                            <div class="axis-value" id="accelY">0.00</div>
+                            <div class="axis-unit">m/s²</div>
+                        </div>
+                        <div class="axis-data">
+                            <div class="axis-label">Z-Axis</div>
+                            <div class="axis-value" id="accelZ">0.00</div>
+                            <div class="axis-unit">m/s²</div>
+                        </div>
+                    </div>
+                    <div class="realtime-graph">
+                        <canvas id="accelGraph" width="300" height="120"></canvas>
+                    </div>
+                </div>
+
+                <!-- Gyroscope Panel -->
+                <div class="sensor-panel">
+                    <div class="sensor-title">
+                        <i class="fas fa-sync-alt"></i> Gyroscope (rad/s)
+                    </div>
+                    <div class="sensor-data">
+                        <div class="axis-data">
+                            <div class="axis-label">X-Axis</div>
+                            <div class="axis-value" id="gyroX">0.00</div>
+                            <div class="axis-unit">rad/s</div>
+                        </div>
+                        <div class="axis-data">
+                            <div class="axis-label">Y-Axis</div>
+                            <div class="axis-value" id="gyroY">0.00</div>
+                            <div class="axis-unit">rad/s</div>
+                        </div>
+                        <div class="axis-data">
+                            <div class="axis-label">Z-Axis</div>
+                            <div class="axis-value" id="gyroZ">0.00</div>
+                            <div class="axis-unit">rad/s</div>
+                        </div>
+                    </div>
+                    <div class="realtime-graph">
+                        <canvas id="gyroGraph" width="300" height="120"></canvas>
+                    </div>
+                </div>
+
+                <!-- Orientation Panel -->
+                <div class="sensor-panel">
+                    <div class="sensor-title">
+                        <i class="fas fa-compass"></i> Orientation (degrees)
+                    </div>
+                    <div class="sensor-data">
+                        <div class="axis-data">
+                            <div class="axis-label">Alpha (Z)</div>
+                            <div class="axis-value" id="orientAlpha">0</div>
+                            <div class="axis-unit">°</div>
+                        </div>
+                        <div class="axis-data">
+                            <div class="axis-label">Beta (X)</div>
+                            <div class="axis-value" id="orientBeta">0</div>
+                            <div class="axis-unit">°</div>
+                        </div>
+                        <div class="axis-data">
+                            <div class="axis-label">Gamma (Y)</div>
+                            <div class="axis-value" id="orientGamma">0</div>
+                            <div class="axis-unit">°</div>
+                        </div>
+                    </div>
+                    <div class="realtime-graph">
+                        <canvas id="orientGraph" width="300" height="120"></canvas>
+                    </div>
+                </div>
+
+                <!-- Derived Metrics Panel -->
+                <div class="sensor-panel">
+                    <div class="sensor-title">
+                        <i class="fas fa-calculator"></i> Derived Metrics
+                    </div>
+                    <div class="sensor-data">
+                        <div class="axis-data">
+                            <div class="axis-label">Magnitude</div>
+                            <div class="axis-value" id="magnitude">0.00</div>
+                            <div class="axis-unit">G</div>
+                        </div>
+                        <div class="axis-data">
+                            <div class="axis-label">Jerk</div>
+                            <div class="axis-value" id="jerk">0.00</div>
+                            <div class="axis-unit">m/s³</div>
+                        </div>
+                        <div class="axis-data">
+                            <div class="axis-label">Angular</div>
+                            <div class="axis-value" id="angular">0.00</div>
+                            <div class="axis-unit">rad/s</div>
+                        </div>
+                    </div>
+                    <div class="realtime-graph">
+                        <canvas id="derivedGraph" width="300" height="120"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="data-export">
+                <button class="export-btn" onclick="exportSensorData('csv')">
+                    <i class="fas fa-file-csv"></i> Export CSV
+                </button>
+                <button class="export-btn" onclick="exportSensorData('json')">
+                    <i class="fas fa-file-code"></i> Export JSON
+                </button>
+                <button class="export-btn" onclick="exportSensorData('analysis')">
+                    <i class="fas fa-chart-bar"></i> Full Analysis
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- External JavaScript Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    
+    <!-- Local JavaScript Files -->
+    <script src="js/utils.js"></script>
+    <script src="js/sensors.js"></script>
+    <script src="js/analysis.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
